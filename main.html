@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+    <link rel="stylesheet" type="text/css" href="main.css">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+    <script src="//code.jquery.com/jquery-1.9.1.js"></script>
+    <script src="//code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+    <link rel="stylesheet" href="http://jqueryui.com/resources/demos/style.css">
+
+</head>
+
+<body style="overflow: hidden;min-width: 480px;">
+    <!--<embed src="main.svg" type="image/svg+xml"/>-->
+    <div class="editor" id="editor">
+        <div class="middle">
+            <div class="bind-events">
+                <div style="width: 100%; left: 0; position: absolute">
+                    <button class="button-set" onclick="methods.select_button_chosen()">select</button>
+                    <button class="button-set" onclick="methods.point_button_chosen()">point</button>
+                    <button class="button-set" onclick="methods.line_button_chosen()">line</button>
+                    <button class="button-set" onclick="methods.circle_button_chosen()">circle</button>
+                    <button class="button-set" onclick="methods.create_axis()">axis</button>
+                    <button class="button-set" onclick="create_function_images.create_function()">fun</button>
+                    <input id="function_input">
+                    <button class="button-set" onclick="methods.delete_objects()">delete</button>
+                    <button class="button-set" onclick="create_function_images.new_variable()">var</button>
+                </div>
+            </div>
+
+            <div class="preview" id="preview" style="width: 1366px; height: 768px">
+                <svg id="main_canvas" onload="methods.select_button_chosen()" xmlns="http://www.w3.org/2000/svg" style=" background: floralwhite; fill: none; position: absolute;
+                pointer-events: auto; width: 1366px; height: 768px;" viewBox="0 0 1366 768">
+                    <g id="axis"></g>
+                    <g id="svg_tracks"></g>
+                    <g id="svg_curves"></g>
+                    <g id="svg_others"></g>
+
+                    <g id="svg_points"></g>
+
+                </svg>
+            </div>
+
+            <div draggable="false" style="user-select:none;background:#f5f5f5;position: relative;height:768px;width:250px;border: 1px solid #979797;border-bottom: 0;border-top: 0;padding: 0 1px;flex-direction: column;display:flex;">
+                <div class="object" style="min-height:100px;border:1px solid #979797;background: #fff;flex:1;">
+                    <div class="object-list">
+                        <div class="list" id="obj_list">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+
+<script type="text/javascript" src="svg_methods.js"></script>
+<script type="text/javascript" src="math.js"></script>
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="jquery-ui.js"></script>
+<script type="text/javascript" src="jquery-ui.min.js"></script>
+</html>
