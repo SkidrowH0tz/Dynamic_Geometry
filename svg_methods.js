@@ -4,7 +4,7 @@ var svg_others = document.getElementById('svg_others')
 var svg_tracks = document.getElementById('svg_tracks')
 var svg_curves = document.getElementById('svg_curves')
 var obj_list = document.getElementById('obj_list')
-
+var property_window = document.getElementById('property')
 var bias_x = 0, bias_y = 0
 var point_r = 3
 var axis_on = false
@@ -35,6 +35,87 @@ class Graph{
     chosen = false
     div_obj
     tracks
+
+}
+class Animation{
+    div_obj
+
+    variable_name
+    range
+    step
+    interval
+    current_value
+    time_fun = 0
+    play_status = false
+
+    constructor(variable_name, range, step, interval) {
+        this.variable_name = variable_name
+        this.range = range
+        this.step = step
+        this.interval = interval
+        this.current_value = range.low
+
+        let div_obj = document.createElement("div")
+        let play_button = document.createElement("button")
+        play_button.appendChild(document.createTextNode('Play'))
+        play_button.classList.value='animation-button'
+        let pause_button = document.createElement("button")
+        pause_button.appendChild(document.createTextNode('Pause'))
+        pause_button.classList.value='animation-button'
+        let stop_button = document.createElement("button")
+        stop_button.appendChild(document.createTextNode('Stop'))
+        stop_button.classList.value='animation-button'
+        let Ct = document.createTextNode('Animation \''+variable_name+'\'')
+        div_obj.classList.value = 'element'
+        obj_list.appendChild(div_obj)
+        div_obj.appendChild(Ct)
+        div_obj.appendChild(play_button)
+        div_obj.appendChild(pause_button)
+        div_obj.appendChild(stop_button)
+        this.div_obj = div_obj
+        let p = this
+        play_button.onclick = function(){
+            if(p.play_status){return}
+            p.play_status = true
+            let variable_obj
+            for(let i in graph.Variables){
+                if(graph.Variables[i].variable_name === p.variable_name){
+                    variable_obj = graph.Variables[i]
+                }
+            }
+            let variable_interval = (p.range.high - p.range.low) / p.step
+            console.log(p.play_status, variable_interval,  p.current_value)
+
+
+            p.time_fun = setInterval(function (){
+                if(p.play_status){
+                    console.log(p.current_value)
+                    if (p.current_value >= p.range.high){
+                        p.current_value = p.range.high
+                        p.play_status = false
+                    }
+                    variable_obj.current_value = p.current_value
+                    p.current_value = p.current_value + variable_interval
+                    variable_obj.ReCalculate_variable_changed()
+                }else{
+                    clearInterval(p.time_fun);
+                    p.current_value = range.low
+                }
+            },p.interval)
+
+        }
+        pause_button.onclick = function (){
+            clearInterval(p.time_fun);
+            p.play_status = false
+
+        }
+        stop_button.onclick = function (){
+            clearInterval(p.time_fun)
+            p.play_status = false
+            p.current_value = range.low
+        }
+    }
+
 }
 class Variable extends Graph{
     variable_name
@@ -66,6 +147,7 @@ class Variable extends Graph{
         }
     }
     chosen_switch(){
+        methods.clear_property_window()
         console.log($('#'+this.assist_div_id).position().top-$('#'+this.assist_div_id).parent().position().top,$('#'+this.assist_div_id).position().left-$('#'+this.assist_div_id).parent().position().left)
         if(this.chosen){
             this.chosen = false
@@ -90,9 +172,7 @@ class Variable extends Graph{
 
         }
     }
-    Calculate_intersection(x,y){
 
-    }
     ReCalculate_chosen(x,y){
         this.assist_div.style.left = x + 'px'
         this.assist_div.style.top = y + 'px'
@@ -255,6 +335,7 @@ class Point extends Graph{
         return mouseover
     }
     chosen_switch(){
+        methods.clear_property_window()
         if(this.chosen){
             this.chosen = false
             for (let k in selected_points){
@@ -286,7 +367,16 @@ class Point extends Graph{
     }
     ReCalculate_Attached(x, y){
 
-        if(this.Attached_to[0].info.type === 'Intersection'){
+        if(this.Attached_to[0].info.type === 'Mid_Point'){
+            let x1 = this.Attached_to[0].object.L.x1.baseVal.value
+            let y1 = this.Attached_to[0].object.L.y1.baseVal.value
+            let x2 = this.Attached_to[0].object.L.x2.baseVal.value
+            let y2 = this.Attached_to[0].object.L.y2.baseVal.value
+            let X = (x1 + x2)/2
+            let Y = (y1 + y2)/2
+            this.P.setAttribute('cx', X)
+            this.P.setAttribute('cy', Y)
+        } else if(this.Attached_to[0].info.type === 'Intersection'){
             if(this.Attached_to[0].info.itsc_type === 'Line_Line'){
                 let A1 = this.Attached_to[0].object[0].A
                 let A2 = this.Attached_to[0].object[1].A
@@ -383,7 +473,32 @@ class Point extends Graph{
         let obj = trans_coord.LTG(x,y)
         if(this.Attached_to.length > 0){
             if(this.Attached_to[0].info.type === 'Line'){
+                if(this.Attached_to[0].object.pb_to !== undefined){
+                    if(this.Attached_to[0].object.chosen){console.log('tt');return}
+                    let A = this.Attached_to[0].object.A
+                    let C = this.Attached_to[0].object.C
+                    let A_ = -1 / A
+                    let C_ = obj.gy - A_ * obj.gx
+                    let X = -(C-C_)/(A-A_)
+                    let Y = A*X+C
 
+                    let OBJ = trans_coord.GTL(X,Y)
+                    this.Attached_to[0].info.ratio = (OBJ.lx-this.Attached_to[0].object.L.x1.baseVal.value)/(this.Attached_to[0].object.L.x2.baseVal.value-this.Attached_to[0].object.L.x1.baseVal.value)
+                    if(this.Attached_to[0].info.ratio >=1 ){
+                        this.P.setAttribute('cx',this.Attached_to[0].object.L.x2.baseVal.value)
+                        this.P.setAttribute('cy',this.Attached_to[0].object.L.y2.baseVal.value)
+                    }else if(this.Attached_to[0].info.ratio <= 0){
+                        this.P.setAttribute('cx',this.Attached_to[0].object.L.x1.baseVal.value)
+                        this.P.setAttribute('cy',this.Attached_to[0].object.L.y1.baseVal.value)
+                    }else{
+                        this.P.setAttribute('cx',OBJ.lx)
+                        this.P.setAttribute('cy',OBJ.ly)
+                    }
+                    for(let i in this.Basic_to){
+                        this.Basic_to[i].ReCalculate_not_chosen()
+                    }
+                    return
+                }
                 if(this.Attached_to[0].object.chosen ||this.Attached_to[0].object.P1.chosen || this.Attached_to[0].object.P2.chosen){
                     if(this.Attached_to[0].object.chosen){console.log('tt');return}
                     let bias_x = x - this.P.cx.baseVal.value
@@ -392,16 +507,10 @@ class Point extends Graph{
                     let y1 = this.Attached_to[0].object.P1.P.cy.baseVal.value
                     let x2 = this.Attached_to[0].object.P2.P.cx.baseVal.value
                     let y2 = this.Attached_to[0].object.P2.P.cy.baseVal.value
-                    /*
-                    if(this.Attached_to[0].object.P1.chosen && !this.Attached_to[0].object.P2.chosen){
-                        this.Attached_to[0].object.P2.ReCalculate_chosen(x2+bias_x, y2+bias_y)
-                    }else if(!this.Attached_to[0].object.P1.chosen && this.Attached_to[0].object.P2.chosen){
-                        this.Attached_to[0].object.P1.ReCalculate_chosen(x1+bias_x, y1+bias_y)
-                    }*/
+
                     this.Attached_to[0].object.P1.ReCalculate_chosen(x1+bias_x, y1+bias_y)
                     this.Attached_to[0].object.P2.ReCalculate_chosen(x2+bias_x, y2+bias_y)
-                    //let X = this.Attached_to[0].object.P1.P.cx.baseVal.value + this.Attached_to[0].info.ratio * (this.Attached_to[0].object.P2.P.cx.baseVal.value - this.Attached_to[0].object.P1.P.cx.baseVal.value)
-                    //let Y = this.Attached_to[0].object.P1.P.cy.baseVal.value + this.Attached_to[0].info.ratio * (this.Attached_to[0].object.P2.P.cy.baseVal.value - this.Attached_to[0].object.P1.P.cy.baseVal.value)
+
                     this.P.setAttribute('cx',x)
                     this.P.setAttribute('cy',y)
                     for(let i in this.Basic_to){
@@ -576,6 +685,22 @@ class Point extends Graph{
                     }
                 }
                 return
+            }else if(this.Attached_to[0].info.type === 'Mid_Point'){
+                let bias_x = x - this.P.cx.baseVal.value
+                let bias_y = y - this.P.cy.baseVal.value
+                let x1 = this.Attached_to[0].object.P1.P.cx.baseVal.value
+                let y1 = this.Attached_to[0].object.P1.P.cy.baseVal.value
+                let x2 = this.Attached_to[0].object.P2.P.cx.baseVal.value
+                let y2 = this.Attached_to[0].object.P2.P.cy.baseVal.value
+
+                this.Attached_to[0].object.P1.ReCalculate_chosen(x1+bias_x, y1+bias_y)
+                this.Attached_to[0].object.P2.ReCalculate_chosen(x2+bias_x, y2+bias_y)
+
+                this.P.setAttribute('cx',x)
+                this.P.setAttribute('cy',y)
+                for(let i in this.Basic_to){
+                    this.Basic_to[i].ReCalculate_not_chosen()
+                }
             }
 
         }
@@ -611,15 +736,18 @@ class Line extends Graph{
     B
     C
     Attached_Points = []
+    Attached_Lines = []
+    pb_to
     constructor(L,P1,P2) {
         super();
         this.L = L
         this.P1 = P1
         this.P2 = P2
-        let x1 = this.P1.P.cx.baseVal.value
-        let y1 = this.P1.P.cy.baseVal.value
-        let x2 = this.P2.P.cx.baseVal.value
-        let y2 = this.P2.P.cy.baseVal.value
+
+        let x1 = this.L.x1.baseVal.value
+        let y1 = this.L.y1.baseVal.value
+        let x2 = this.L.x2.baseVal.value
+        let y2 = this.L.y2.baseVal.value
         let obj1 = trans_coord.LTG(x1,y1)
         let obj2 = trans_coord.LTG(x2,y2)
         x1=obj1.gx
@@ -660,7 +788,74 @@ class Line extends Graph{
         }
     }
 
+    show_property(){
+        let mid_point_button = document.createElement('button')
+        mid_point_button.appendChild(document.createTextNode('Middle Point'))
+        let perpendicular_bisector_button = document.createElement('button')
+        perpendicular_bisector_button.appendChild(document.createTextNode('Perpendicular Bisector'))
+        let p = this
+        mid_point_button.onclick = function (){
+            let x1 = p.L.x1.baseVal.value
+            let x2 = p.L.x2.baseVal.value
+            let y1 = p.L.y1.baseVal.value
+            let y2 = p.L.y2.baseVal.value
+            let x = (x1 + x2) / 2
+            let y = (y1 + y2) / 2
+            let P = create_elements.create_point(x, y, svg_points,'red')
+            let PP = new Point(P)
+            PP.Attached_to.push({
+                object:p,
+                info:{
+                    type: 'Mid_Point',
+                }
+            })
+            p.Attached_Points.push(PP)
+            graph.add_point(PP)
+            graph.elements.push(P)
+        }
+        perpendicular_bisector_button.onclick = function (){
+            let x1 = p.L.x1.baseVal.value
+            let x2 = p.L.x2.baseVal.value
+            let y1 = p.L.y1.baseVal.value
+            let y2 = p.L.y2.baseVal.value
+            let x = (x1 + x2) / 2
+            let y = (y1 + y2) / 2
+            let P = create_elements.create_point(x, y, svg_points,'red')
+            let PP = new Point(P)
+            PP.Attached_to.push({
+                object:p,
+                info:{
+                    type: 'Mid_Point',
+                }
+            })
+            p.Attached_Points.push(PP)
+            graph.add_point(PP)
+            graph.elements.push(P)
+
+            let obj = trans_coord.LTG(x,y)
+            let a = -1/p.A
+            let c = obj.gy - a*obj.gx
+
+            let X1 = obj.gx - 25/Math.sqrt(a*a+1)
+            let X2 = obj.gx + 25/Math.sqrt(a*a+1)
+
+            let Y1 = a*X1 + c
+            let Y2 = a*X2 + c
+
+            let OBJ1 = trans_coord.GTL(X1,Y1)
+            let OBJ2 = trans_coord.GTL(X2,Y2)
+            let line = create_elements.create_line(OBJ1.lx, OBJ2.lx, OBJ1.ly, OBJ2.ly, svg_others, 'blue')
+            let l = new Line(line, undefined, undefined)
+            graph.elements.push(line)
+            graph.add_line(l)
+            l.pb_to = PP
+            p.Attached_Lines.push(l)
+        }
+        property_window.appendChild(mid_point_button)
+        property_window.appendChild(perpendicular_bisector_button)
+    }
     chosen_switch(){
+        methods.clear_property_window()
         if(this.chosen){
             this.chosen = false
             for (let k in selected_lines){
@@ -675,22 +870,23 @@ class Line extends Graph{
             this.chosen = true
             selected_lines.push({
                 L:this,
-                x1:this.P1.P.cx.baseVal.value,
-                y1:this.P1.P.cy.baseVal.value,
-                x2:this.P2.P.cx.baseVal.value,
-                y2:this.P2.P.cy.baseVal.value
+                x1:this.L.x1.baseVal.value,
+                y1:this.L.y1.baseVal.value,
+                x2:this.L.x2.baseVal.value,
+                y2:this.L.y2.baseVal.value
             })
             this.L.setAttribute('stroke', 'green')
             this.div_obj.style.backgroundColor = 'red'
+            this.show_property()
         }
     }
     is_mouse_on(x, y){
         let mouse_on = false
 
-        let x1 = this.P1.P.cx.baseVal.value
-        let y1 = this.P1.P.cy.baseVal.value
-        let x2 = this.P2.P.cx.baseVal.value
-        let y2 = this.P2.P.cy.baseVal.value
+        let x1 = this.L.x1.baseVal.value
+        let y1 = this.L.y1.baseVal.value
+        let x2 = this.L.x2.baseVal.value
+        let y2 = this.L.y2.baseVal.value
         let obj = trans_coord.LTG(x,y)
         let obj1 = trans_coord.LTG(x1,y1)
         let obj2 = trans_coord.LTG(x2,y2)
@@ -703,7 +899,7 @@ class Line extends Graph{
         let d = Math.abs(this.A*x+this.B*y+this.C)/Math.sqrt(this.A*this.A+this.B*this.B)
         let cos1 = ((x1-x2)*(x1-x)+(y1-y2)*(y1-y))/(Math.sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2))*Math.sqrt((x1-x)*(x1-x)+(y1-y)*(y1-y)))
         let cos2 = ((x2-x1)*(x2-x)+(y2-y1)*(y2-y))/(Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1))*Math.sqrt((x2-x)*(x2-x)+(y2-y)*(y2-y)))
-
+        console.log(d)
         if( d<=0.02 && cos1>0 && cos2>0 ){mouse_on=true}
         console.log(mouse_on)
         return mouse_on
@@ -736,7 +932,36 @@ class Line extends Graph{
             let y = y1 + ratio*(y2-y1)
             this.Attached_Points[i].ReCalculate_Attached(x,y)
         }
+        for (let i in this.Attached_Lines){
+            let x = (x1 + x2) / 2
+            let y = (y1 + y2) / 2
+            let obj = trans_coord.LTG(x,y)
+            let a = -1/this.A
+            let c = obj.gy - a*obj.gx
+            let X1 = obj.gx - 25/Math.sqrt(a*a+1)
+            let X2 = obj.gx + 25/Math.sqrt(a*a+1)
+            let Y1 = a*X1 + c
+            let Y2 = a*X2 + c
+            let OBJ1 = trans_coord.GTL(X1,Y1)
+            let OBJ2 = trans_coord.GTL(X2,Y2)
 
+            this.Attached_Lines[i].A = a
+            this.Attached_Lines[i].C = c
+
+
+            this.Attached_Lines[i].L.setAttribute('x1', OBJ1.lx)
+            this.Attached_Lines[i].L.setAttribute('x2', OBJ2.lx)
+            this.Attached_Lines[i].L.setAttribute('y1', OBJ1.ly)
+            this.Attached_Lines[i].L.setAttribute('y2', OBJ2.ly)
+
+            for (let j in this.Attached_Lines[i].Attached_Points){
+                let ratio = this.Attached_Lines[i].Attached_Points[j].Attached_to[0].info.ratio
+                console.log(ratio)
+                let x = OBJ1.lx + ratio*(OBJ2.lx-OBJ1.lx)
+                let y = OBJ1.ly + ratio*(OBJ2.ly-OBJ1.ly)
+                this.Attached_Lines[i].Attached_Points[j].ReCalculate_Attached(x,y)
+            }
+        }
 
     }
     ReCalculate_chosen(x1,y1,x2,y2){
@@ -744,24 +969,58 @@ class Line extends Graph{
         if(track_status){
             create_elements.create_line(this.L.x1.baseVal.value, this.L.x2.baseVal.value, this.L.y1.baseVal.value, this.L.y2.baseVal.value, this.tracks, 'purple')
         }
+
+        let bias_x = x1 - this.L.x1.baseVal.value
+        let bias_y = y1 - this.L.y1.baseVal.value
         this.L.setAttribute('x1', x1)
         this.L.setAttribute('y1', y1)
         this.L.setAttribute('x2', x2)
         this.L.setAttribute('y2', y2)
-        this.P1.ReCalculate_chosen(x1,y1)
-        this.P2.ReCalculate_chosen(x2,y2)
-
+        if(this.pb_to === undefined) {
+            this.P1.ReCalculate_chosen(x1, y1)
+            this.P2.ReCalculate_chosen(x2, y2)
+        }else{
+            let x = (x1+x2)/2
+            let y = (y1+y2)/2
+            this.pb_to.ReCalculate_chosen(x, y)
+            /*
+            let X_1 = this.pb_to.P1.P.cx.baseVal.value
+            let Y_1 = this.pb_to.P1.P.cy.baseVal.value
+            let X_2 = this.pb_to.P2.P.cx.baseVal.value
+            let Y_2 = this.pb_to.P2.P.cy.baseVal.value
+            this.pb_to.P1.ReCalculate_chosen(X_1+bias_x,Y_1+bias_y)
+            this.pb_to.P2.ReCalculate_chosen(X_2+bias_x,Y_2+bias_y)*/
+        }
         for(let i in this.Attached_Points){
-            this.Attached_Points[i].ReCalculate_Attached(this.P1.P.cx.baseVal.value+this.Attached_Points[i].Attached_to[0].info.ratio*(this.P2.P.cx.baseVal.value-this.P1.P.cx.baseVal.value),this.P1.P.cy.baseVal.value+this.Attached_Points[i].Attached_to[0].info.ratio*(this.P2.P.cy.baseVal.value-this.P1.P.cy.baseVal.value))
+            this.Attached_Points[i].ReCalculate_Attached(this.L.x1.baseVal.value+this.Attached_Points[i].Attached_to[0].info.ratio*(this.L.x2.baseVal.value-this.L.x1.baseVal.value),this.L.y1.baseVal.value+this.Attached_Points[i].Attached_to[0].info.ratio*(this.L.y2.baseVal.value-this.L.y1.baseVal.value))
         }
         let obj1 = trans_coord.LTG(x1,y1)
         let obj2 = trans_coord.LTG(x2,y2)
-        x1=obj1.gx
-        y1=obj1.gy
-        x2=obj2.gx
-        y2=obj2.gy
-        this.A = (y2-y1)/(x2-x1)
-        this.C = (x2*y1-x1*y2)/(x2-x1)
+        this.A = (obj2.gy-obj1.gy)/(obj2.gx-obj1.gx)
+        this.C = (obj2.gx*obj1.gy-obj1.gx*obj2.gy)/(obj2.gx-obj1.gx)
+        for (let i in this.Attached_Lines){
+            let x = (x1 + x2) / 2
+            let y = (y1 + y2) / 2
+            let obj = trans_coord.LTG(x,y)
+            let a = -1/this.A
+            let c = obj.gy - a*obj.gx
+            let X1 = obj.gx - 25/Math.sqrt(a*a+1)
+            let X2 = obj.gx + 25/Math.sqrt(a*a+1)
+            let Y1 = a*X1 + c
+            let Y2 = a*X2 + c
+            let OBJ1 = trans_coord.GTL(X1,Y1)
+            let OBJ2 = trans_coord.GTL(X2,Y2)
+
+            this.Attached_Lines[i].A = a
+            this.Attached_Lines[i].C = c
+
+
+            this.Attached_Lines[i].L.setAttribute('x1', OBJ1.lx)
+            this.Attached_Lines[i].L.setAttribute('x2', OBJ2.lx)
+            this.Attached_Lines[i].L.setAttribute('y1', OBJ1.ly)
+            this.Attached_Lines[i].L.setAttribute('y2', OBJ2.ly)
+
+        }
     }
     Delete(){
         for(let i in this.Attached_Points){
@@ -783,8 +1042,10 @@ class Line extends Graph{
         obj_list.removeChild(this.div_obj)
 
     }
+
 }
 class Circle extends Graph{
+
     type = 'Circle'
     C
     Pr
@@ -840,6 +1101,7 @@ class Circle extends Graph{
         return mouse_on
     }
     chosen_switch(){
+        methods.clear_property_window()
         if(this.chosen){
             this.chosen = false
             for (let k in selected_circles){
@@ -1023,6 +1285,7 @@ class FunctionCurve extends Graph{
         return mouse_on
     }
     chosen_switch(){
+        methods.clear_property_window()
         if(this.chosen){
             this.chosen = false
             for (let k in selected_curves){
@@ -1577,6 +1840,110 @@ class create_function_images{
             editor.removeChild(window)
         }
     }
+    static new_animation(){
+        let window = document.createElement('div')
+        let win = document.createElement('div')
+        let title = document.createElement('div')
+        let inputs_form = document.createElement('div')
+        let title_div = document.createElement('div')
+        let e_title_variable = document.createElement('div')
+        let e_title_minimum = document.createElement('div')
+        let e_title_maximum = document.createElement('div')
+        let e_title_increment = document.createElement('div')
+        let e_title_cv = document.createElement('div')
+        let input_div = document.createElement('div')
+        let common_input_variable = document.createElement('div')
+        let common_input_minimum = document.createElement('div')
+        let common_input_maximum = document.createElement('div')
+        let common_input_increment = document.createElement('div')
+        let common_input_cv = document.createElement('div')
+        let input_variable = document.createElement('input')
+        let input_minimum = document.createElement('input')
+        let input_maximum = document.createElement('input')
+        let input_increment = document.createElement('input')
+        let input_cv = document.createElement('input')
+        let confirm_button_div = document.createElement('div')
+        let cb_div = document.createElement('div')
+
+        window.classList.value = 'window'
+        win.classList.value = 'win'
+        title.classList.value = 'title'
+        inputs_form.classList.value = 'inputs-form'
+        title_div.classList.value = 'title-div'
+        e_title_variable.classList.value = 'e-title'
+        e_title_minimum.classList.value = 'e-title'
+        e_title_maximum.classList.value = 'e-title'
+        e_title_increment.classList.value = 'e-title'
+        e_title_cv.classList.value = 'e-title'
+        input_div.classList.value = 'input-div'
+        common_input_variable.classList.value = 'common-input'
+        common_input_minimum.classList.value = 'common-input'
+        common_input_maximum.classList.value = 'common-input'
+        common_input_increment.classList.value = 'common-input'
+        common_input_cv.classList.value = 'common-input'
+        input_variable.classList.value = 'input'
+        input_minimum.classList.value = 'input'
+        confirm_button_div.classList.value = 'confirm-button'
+        cb_div.classList.value = 'cb'
+
+        input_minimum.type = 'number'
+        input_maximum.classList.value = 'input'
+        input_maximum.type = 'number'
+        input_increment.classList.value = 'input'
+        input_increment.type = 'number'
+        input_cv.classList.value = 'input'
+        input_cv.type = 'number'
+
+        title.appendChild(document.createTextNode('Animation Window'))
+        e_title_variable.appendChild(document.createTextNode('Variable'))
+        e_title_minimum.appendChild(document.createTextNode('Minimum'))
+        e_title_maximum.appendChild(document.createTextNode('Maximum'))
+        e_title_increment.appendChild(document.createTextNode('Step'))
+        e_title_cv.appendChild(document.createTextNode('Interval'))
+        cb_div.appendChild(document.createTextNode('Confirm'))
+
+        input_minimum.value = 0
+        input_maximum.value = 1
+        input_increment.value = 100
+        input_cv.value = 50
+
+        confirm_button_div.appendChild(cb_div)
+
+        common_input_variable.appendChild(input_variable)
+        common_input_minimum.appendChild(input_minimum)
+        common_input_maximum.appendChild(input_maximum)
+        common_input_increment.appendChild(input_increment)
+        common_input_cv.appendChild(input_cv)
+
+        input_div.appendChild(common_input_variable)
+        input_div.appendChild(common_input_minimum)
+        input_div.appendChild(common_input_maximum)
+        input_div.appendChild(common_input_increment)
+        input_div.appendChild(common_input_cv)
+
+        title_div.appendChild(e_title_variable)
+        title_div.appendChild(e_title_minimum)
+        title_div.appendChild(e_title_maximum)
+        title_div.appendChild(e_title_increment)
+        title_div.appendChild(e_title_cv)
+
+        inputs_form.appendChild(title_div)
+        inputs_form.appendChild(input_div)
+
+        win.appendChild(title)
+
+        window.appendChild(win)
+        window.appendChild(inputs_form)
+        window.appendChild(confirm_button_div)
+
+        let editor = document.getElementById('editor')
+        editor.appendChild(window)
+
+        cb_div.onclick = function (){
+            create_function_images.create_animation(input_variable.value, {low:parseFloat(input_minimum.value), high:parseFloat(input_maximum.value)}, parseFloat(input_increment.value), parseFloat(input_cv.value))
+            editor.removeChild(window)
+        }
+    }
     static create_variable(variable_name, range={low:0,high:10}, increment=1, current_value=5){
         let v = new Variable(variable_name, range, increment, current_value)
 
@@ -1768,6 +2135,12 @@ class create_function_images{
         console.log(graph)
         methods.select_button_chosen()
     }
+    static create_animation(variable_name, range={low:0,high:1}, step=100, interval=50){
+        let a = new Animation(variable_name, range, step, interval)
+
+
+    }
+
 }
 
 class methods{
@@ -1827,7 +2200,11 @@ class methods{
             graph.elements[i].onmouseout = function (){}
         }
     }
-
+    static clear_property_window(){
+        while (property_window.firstChild) {
+            property_window.removeChild(property_window.firstChild);
+        }
+    }
     static is_mouse_on(x, y){
         let v = []
         for (let i in graph.Lines){
@@ -2023,10 +2400,10 @@ class methods{
                 }
                 for(let i in selected_lines){
                     selected_lines[i].L.ReCalculate_chosen(selected_lines[i].x1+bias_x,selected_lines[i].y1+bias_y,selected_lines[i].x2+bias_x,selected_lines[i].y2+bias_y)
-                    selected_lines[i].x1 = selected_lines[i].L.P1.P.cx.baseVal.value
-                    selected_lines[i].y1 = selected_lines[i].L.P1.P.cy.baseVal.value
-                    selected_lines[i].x2 = selected_lines[i].L.P2.P.cx.baseVal.value
-                    selected_lines[i].y2 = selected_lines[i].L.P2.P.cy.baseVal.value
+                    selected_lines[i].x1 = selected_lines[i].L.L.x1.baseVal.value
+                    selected_lines[i].y1 = selected_lines[i].L.L.y1.baseVal.value
+                    selected_lines[i].x2 = selected_lines[i].L.L.x2.baseVal.value
+                    selected_lines[i].y2 = selected_lines[i].L.L.y2.baseVal.value
                 }
                 for(let i in selected_circles){
                     selected_circles[i].C.ReCalculate_chosen(selected_circles[i].x+bias_x,selected_circles[i].y+bias_y,selected_circles[i].r2b_bias_x,selected_circles[i].r2b_bias_y)
