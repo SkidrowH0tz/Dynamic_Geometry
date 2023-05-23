@@ -3,6 +3,7 @@ var svg_points = document.getElementById('svg_points')
 var svg_others = document.getElementById('svg_others')
 var svg_tracks = document.getElementById('svg_tracks')
 var svg_curves = document.getElementById('svg_curves')
+var svg_texts = document.getElementById('svg_texts')
 var obj_list = document.getElementById('obj_list')
 var property_window = document.getElementById('property')
 var bias_x = 0, bias_y = 0
@@ -35,7 +36,7 @@ class Graph{
     chosen = false
     div_obj
     tracks
-
+    tracks_checkbox
 }
 class Animation{
     div_obj
@@ -48,6 +49,9 @@ class Animation{
     time_fun = 0
     play_status = false
 
+    play_button
+    pause_button
+    stop_button
     constructor(variable_name, range, step, interval) {
         this.variable_name = variable_name
         this.range = range
@@ -69,11 +73,15 @@ class Animation{
         div_obj.classList.value = 'element'
         obj_list.appendChild(div_obj)
         div_obj.appendChild(Ct)
-        div_obj.appendChild(play_button)
-        div_obj.appendChild(pause_button)
-        div_obj.appendChild(stop_button)
+        //div_obj.appendChild(play_button)
+        //div_obj.appendChild(pause_button)
+        //div_obj.appendChild(stop_button)
         this.div_obj = div_obj
         let p = this
+
+        this.div_obj.onclick = function (event){
+            p.chosen_switch()
+        }
         play_button.onclick = function(){
             if(p.play_status){return}
             p.play_status = true
@@ -96,6 +104,7 @@ class Animation{
                     }
                     variable_obj.current_value = p.current_value
                     p.current_value = p.current_value + variable_interval
+                    $('#cv_input_' + p.variable_name).val(variable_obj.current_value)
                     variable_obj.ReCalculate_variable_changed()
                 }else{
                     clearInterval(p.time_fun);
@@ -114,8 +123,67 @@ class Animation{
             p.play_status = false
             p.current_value = range.low
         }
+        this.play_button = play_button
+        this.pause_button = pause_button
+        this.stop_button = stop_button
     }
+    show_property(){
+        let play_button = this.play_button
+        let pause_button = this.pause_button
+        let stop_button = this.stop_button
 
+        let start_div = document.createElement('div')
+        start_div.appendChild(document.createTextNode('Start:'))
+        let start_input = document.createElement('input')
+        start_input.value = this.range.low
+        start_div.appendChild(start_input)
+
+        let end_div = document.createElement('div')
+        end_div.appendChild(document.createTextNode('End:'))
+        let end_input = document.createElement('input')
+        end_input.value = this.range.high
+        end_div.appendChild(end_input)
+
+        let step_div = document.createElement('div')
+        step_div.appendChild(document.createTextNode('Steps:'))
+        let step_input = document.createElement('input')
+        step_input.value = this.step
+        step_div.appendChild(step_input)
+
+        let interval_div = document.createElement('div')
+        interval_div.appendChild(document.createTextNode('Time Interval:'))
+        let interval_input = document.createElement('input')
+        interval_input.value = this.interval
+        interval_div.appendChild(interval_input)
+
+        let cv_div = document.createElement('div')
+        cv_div.appendChild(document.createTextNode('Current Value:'))
+        let cv_input = document.createElement('input')
+        cv_input.value = this.current_value
+        cv_div.appendChild(cv_input)
+        cv_input.id = 'cv_input_' + this.variable_name
+        property_window.appendChild(play_button)
+        property_window.appendChild(pause_button)
+        property_window.appendChild(stop_button)
+        property_window.appendChild(start_div)
+        property_window.appendChild(end_div)
+        property_window.appendChild(step_div)
+        property_window.appendChild(interval_div)
+        property_window.appendChild(cv_div)
+    }
+    chosen_switch(){
+        methods.clear_property_window()
+        if(this.chosen){
+            this.chosen = false
+            this.div_obj.style.backgroundColor = 'white'
+        }
+        else{
+            this.chosen = true
+
+            this.div_obj.style.backgroundColor = 'red'
+            this.show_property()
+        }
+    }
 }
 class Variable extends Graph{
     variable_name
@@ -178,6 +246,8 @@ class Variable extends Graph{
         this.assist_div.style.top = y + 'px'
     }
     ReCalculate_variable_changed(){
+        $( "#variable_slider_" + this.variable_name).slider({value: this.current_value})
+        $('#variable_input_' + this.variable_name).val(this.current_value)
         for(let i in this.associate_functions){
             this.associate_functions[i].ReCalculate()
         }
@@ -308,6 +378,8 @@ class Point extends Graph{
     P
     Basic_to = []
     Attached_to = []
+    name = ''
+    name_element
     constructor(P) {
         super();
         this.P = P
@@ -321,6 +393,11 @@ class Point extends Graph{
         this.div_obj.onclick = function (event){
             p.chosen_switch()
         }
+        let x = this.P.cx.baseVal.value + 10
+        let y = this.P.cy.baseVal.value + 15
+        this.name_element = create_elements.create_text(x,y,svg_texts,'black','')
+        this.name_element.setAttribute('font-size', '20')
+        this.name_element.setAttribute('class','static_text')
     }
     isMouseOn(){
         let mouseover = false
@@ -333,6 +410,23 @@ class Point extends Graph{
             mouseover = false
         }
         return mouseover
+    }
+    show_property(){
+        let name_div  = document.createElement('div')
+        name_div.appendChild(document.createTextNode('Name:'))
+        let name_input = document.createElement('input')
+        name_input.value = this.name
+        let p = this
+        name_input.onkeydown = function (event){
+            if(event.keyCode === 13){
+                p.name = name_input.value
+                p.name_element.textContent = p.name
+            }
+        }
+
+        property_window.appendChild(name_div)
+        property_window.appendChild(name_input)
+
     }
     chosen_switch(){
         methods.clear_property_window()
@@ -363,7 +457,12 @@ class Point extends Graph{
             }
             this.P.setAttribute('fill', 'green')
             this.div_obj.style.backgroundColor = 'red'
+            this.show_property()
         }
+    }
+    ReCalculate_text_position(x, y){
+        this.name_element.setAttribute('x',x)
+        this.name_element.setAttribute('y',y)
     }
     ReCalculate_Attached(x, y){
 
@@ -376,6 +475,7 @@ class Point extends Graph{
             let Y = (y1 + y2)/2
             this.P.setAttribute('cx', X)
             this.P.setAttribute('cy', Y)
+            this.ReCalculate_text_position(X+10, Y+15)
         } else if(this.Attached_to[0].info.type === 'Intersection'){
             if(this.Attached_to[0].info.itsc_type === 'Line_Line'){
                 let A1 = this.Attached_to[0].object[0].A
@@ -387,6 +487,7 @@ class Point extends Graph{
                 let obj = trans_coord.GTL(X,Y)
                 this.P.setAttribute('cx', obj.lx)
                 this.P.setAttribute('cy', obj.ly)
+                this.ReCalculate_text_position(obj.lx+10, obj.ly+15)
             }else if(this.Attached_to[0].info.itsc_type === 'Line_Circle'){
                 let A,C,xr,yr,r
                 let line_idx = 0
@@ -418,10 +519,12 @@ class Point extends Graph{
                     this.P.setAttribute('visibility', 'visible')
                     this.P.setAttribute('cx', X2)
                     this.P.setAttribute('cy', Y2)
+                    this.ReCalculate_text_position(X2+10, Y2+15)
                 }else{
                     this.P.setAttribute('visibility', 'visible')
                     this.P.setAttribute('cx', X1)
                     this.P.setAttribute('cy', Y1)
+                    this.ReCalculate_text_position(X1+10, Y1+15)
                 }
             }else if(this.Attached_to[0].info.itsc_type === 'Circle_Circle'){
                 let A,C,x1,y1,x2,y2,r1,r2
@@ -451,15 +554,18 @@ class Point extends Graph{
                     this.P.setAttribute('visibility', 'visible')
                     this.P.setAttribute('cx', X2)
                     this.P.setAttribute('cy', Y2)
+                    this.ReCalculate_text_position(X2+10, Y2+15)
                 }else{
                     this.P.setAttribute('visibility', 'visible')
                     this.P.setAttribute('cx', X1)
                     this.P.setAttribute('cy', Y1)
+                    this.ReCalculate_text_position(X1+10, Y1+15)
                 }
             }
         }else {
             this.P.setAttribute('cx', x)
             this.P.setAttribute('cy', y)
+            this.ReCalculate_text_position(x+10, y+15)
         }
         //this.P.setAttribute('cx', x)
         //this.P.setAttribute('cy', y)
@@ -487,12 +593,15 @@ class Point extends Graph{
                     if(this.Attached_to[0].info.ratio >=1 ){
                         this.P.setAttribute('cx',this.Attached_to[0].object.L.x2.baseVal.value)
                         this.P.setAttribute('cy',this.Attached_to[0].object.L.y2.baseVal.value)
+                        this.ReCalculate_text_position(this.Attached_to[0].object.L.x2.baseVal.value+10, this.Attached_to[0].object.L.y2.baseVal.value+15)
                     }else if(this.Attached_to[0].info.ratio <= 0){
                         this.P.setAttribute('cx',this.Attached_to[0].object.L.x1.baseVal.value)
                         this.P.setAttribute('cy',this.Attached_to[0].object.L.y1.baseVal.value)
+                        this.ReCalculate_text_position(this.Attached_to[0].object.L.x1.baseVal.value+10, this.Attached_to[0].object.L.y1.baseVal.value+15)
                     }else{
                         this.P.setAttribute('cx',OBJ.lx)
                         this.P.setAttribute('cy',OBJ.ly)
+                        this.ReCalculate_text_position(OBJ.lx+10, OBJ.ly+15)
                     }
                     for(let i in this.Basic_to){
                         this.Basic_to[i].ReCalculate_not_chosen()
@@ -513,6 +622,7 @@ class Point extends Graph{
 
                     this.P.setAttribute('cx',x)
                     this.P.setAttribute('cy',y)
+                    this.ReCalculate_text_position(x+10, y+15)
                     for(let i in this.Basic_to){
                         this.Basic_to[i].ReCalculate_not_chosen()
                     }
@@ -531,12 +641,15 @@ class Point extends Graph{
                 if(this.Attached_to[0].info.ratio >=1 ){
                     this.P.setAttribute('cx',this.Attached_to[0].object.L.x2.baseVal.value)
                     this.P.setAttribute('cy',this.Attached_to[0].object.L.y2.baseVal.value)
+                    this.ReCalculate_text_position(this.Attached_to[0].object.L.x2.baseVal.value+10, this.Attached_to[0].object.L.y2.baseVal.value+15)
                 }else if(this.Attached_to[0].info.ratio <= 0){
                     this.P.setAttribute('cx',this.Attached_to[0].object.L.x1.baseVal.value)
                     this.P.setAttribute('cy',this.Attached_to[0].object.L.y1.baseVal.value)
+                    this.ReCalculate_text_position(this.Attached_to[0].object.L.x1.baseVal.value+10, this.Attached_to[0].object.L.y1.baseVal.value+15)
                 }else{
                     this.P.setAttribute('cx',OBJ.lx)
                     this.P.setAttribute('cy',OBJ.ly)
+                    this.ReCalculate_text_position(OBJ.lx+10, OBJ.ly+15)
                 }
                 for(let i in this.Basic_to){
                     this.Basic_to[i].ReCalculate_not_chosen()
@@ -573,6 +686,7 @@ class Point extends Graph{
                     //let Y = this.Attached_to[0].object.Pr.P.cy.baseVal.value - this.Attached_to[0].info.sin_value * this.Attached_to[0].object.C.r.baseVal.value
                     this.P.setAttribute('cx',x)
                     this.P.setAttribute('cy',y)
+                    this.ReCalculate_text_position(x+10, y+15)
                     for(let i in this.Basic_to){
                         this.Basic_to[i].ReCalculate_not_chosen()
                     }
@@ -592,6 +706,7 @@ class Point extends Graph{
                 this.Attached_to[0].info.sin_value = sin_value
                 this.P.setAttribute('cx',X)
                 this.P.setAttribute('cy',Y)
+                this.ReCalculate_text_position(X+10, Y+15)
                 for(let i in this.Basic_to){
                     this.Basic_to[i].ReCalculate_not_chosen()
                 }
@@ -622,6 +737,7 @@ class Point extends Graph{
                 }
                 this.P.setAttribute('cx',X)
                 this.P.setAttribute('cy',Y)
+                this.ReCalculate_text_position(X+10, Y+15)
                 for(let i in this.Basic_to){
                     this.Basic_to[i].ReCalculate_not_chosen()
                 }
@@ -648,6 +764,7 @@ class Point extends Graph{
                         //let Y = this.Attached_to[0].object.P1.P.cy.baseVal.value + this.Attached_to[0].info.ratio * (this.Attached_to[0].object.P2.P.cy.baseVal.value - this.Attached_to[0].object.P1.P.cy.baseVal.value)
                         this.P.setAttribute('cx',x)
                         this.P.setAttribute('cy',y)
+                        this.ReCalculate_text_position(x+10, y+15)
                         for(let i in this.Basic_to){
                             this.Basic_to[i].ReCalculate_not_chosen()
                         }
@@ -678,6 +795,7 @@ class Point extends Graph{
                         //let Y = this.Attached_to[0].object.Pr.P.cy.baseVal.value - this.Attached_to[0].info.sin_value * this.Attached_to[0].object.C.r.baseVal.value
                         this.P.setAttribute('cx',x)
                         this.P.setAttribute('cy',y)
+                        this.ReCalculate_text_position(x+10, y+15)
                         for(let i in this.Basic_to){
                             this.Basic_to[i].ReCalculate_not_chosen()
                         }
@@ -698,6 +816,7 @@ class Point extends Graph{
 
                 this.P.setAttribute('cx',x)
                 this.P.setAttribute('cy',y)
+                this.ReCalculate_text_position(x+10, y+15)
                 for(let i in this.Basic_to){
                     this.Basic_to[i].ReCalculate_not_chosen()
                 }
@@ -706,6 +825,7 @@ class Point extends Graph{
         }
         this.P.setAttribute('cx',x)
         this.P.setAttribute('cy',y)
+        this.ReCalculate_text_position(x+10, y+15)
         for(let i in this.Basic_to){
             this.Basic_to[i].ReCalculate_not_chosen()
         }
@@ -768,11 +888,12 @@ class Line extends Graph{
         cb.name = 'track-cb'
         cb.value = 'track-cb'
         cb.classList.value = 'track-cb'
+        this.tracks_checkbox = cb
         div_obj.classList.value = 'element'
         obj_list.appendChild(div_obj)
 
         div_obj.appendChild(C)
-        div_obj.appendChild(cb)
+        //div_obj.appendChild(cb)
 
         this.div_obj = div_obj
         let p = this
@@ -851,8 +972,14 @@ class Line extends Graph{
             l.pb_to = PP
             p.Attached_Lines.push(l)
         }
+
+        let track_div = document.createElement('div')
+        track_div.appendChild(document.createTextNode('Tracks(√ for open, × for close):'))
+        let cb = this.tracks_checkbox
+        track_div.appendChild(cb)
         property_window.appendChild(mid_point_button)
         property_window.appendChild(perpendicular_bisector_button)
+        property_window.appendChild(track_div)
     }
     chosen_switch(){
         methods.clear_property_window()
@@ -1067,11 +1194,12 @@ class Circle extends Graph{
         cb.name = 'track-cb'
         cb.value = 'track-cb'
         cb.classList.value = 'track-cb'
+        this.tracks_checkbox = cb
         div_obj.classList.value = 'element'
         obj_list.appendChild(div_obj)
 
         div_obj.appendChild(Ct)
-        div_obj.appendChild(cb)
+        //div_obj.appendChild(cb)
         this.div_obj = div_obj
 
         let p = this
@@ -1100,6 +1228,13 @@ class Circle extends Graph{
         console.log(mouse_on)
         return mouse_on
     }
+    show_property(){
+        let track_div = document.createElement('div')
+        track_div.appendChild(document.createTextNode('Tracks(√ for open, × for close):'))
+        let cb = this.tracks_checkbox
+        track_div.appendChild(cb)
+        property_window.appendChild(track_div)
+    }
     chosen_switch(){
         methods.clear_property_window()
         if(this.chosen){
@@ -1123,6 +1258,7 @@ class Circle extends Graph{
             })
             this.C.setAttribute('stroke', 'green')
             this.div_obj.style.backgroundColor = 'red'
+            this.show_property()
         }
     }
     ReCalculate_not_chosen(){
@@ -1235,11 +1371,12 @@ class FunctionCurve extends Graph{
         cb.name = 'track-cb'
         cb.value = 'track-cb'
         cb.classList.value = 'track-cb'
+        this.tracks_checkbox = cb
         div_obj.classList.value = 'element'
         obj_list.appendChild(div_obj)
 
         div_obj.appendChild(C)
-        div_obj.appendChild(cb)
+        //div_obj.appendChild(cb)
 
         this.div_obj = div_obj
         let p = this
@@ -1284,6 +1421,13 @@ class FunctionCurve extends Graph{
         console.log(mouse_on)
         return mouse_on
     }
+    show_property(){
+        let track_div = document.createElement('div')
+        track_div.appendChild(document.createTextNode('Tracks(√ for open, × for close):'))
+        let cb = this.tracks_checkbox
+        track_div.appendChild(cb)
+        property_window.appendChild(track_div)
+    }
     chosen_switch(){
         methods.clear_property_window()
         if(this.chosen){
@@ -1303,6 +1447,7 @@ class FunctionCurve extends Graph{
             })
             this.path.setAttribute('stroke', 'green')
             this.div_obj.style.backgroundColor = 'red'
+            this.show_property()
         }
     }
     ReCalculate(){
@@ -1730,12 +1875,13 @@ class create_elements{
 
     static create_text = function (x,y,id,color='black',content=""){
         let text = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-        let C = document.createTextNode(content)
+
         text.setAttribute('x',x)
         text.setAttribute('y',y)
         text.setAttribute('fill',color)
         id.appendChild(text)
-        text.appendChild(C)
+
+        text.textContent = content
         return text
     }
 }
@@ -2145,12 +2291,8 @@ class create_function_images{
 
 class methods{
     static get_track_status(object){
-        let track_cb
-        for (let i in object.div_obj.childNodes){
-            if(object.div_obj.childNodes[i].name === 'track-cb'){
-                track_cb = object.div_obj.childNodes[i]
-            }
-        }
+        let track_cb = object.tracks_checkbox
+
         return track_cb.checked
     }
     static clear_graph(){
@@ -2939,10 +3081,10 @@ class methods{
                 let text_x_2 = create_elements.create_text(683+i*50, 404, g, "black", i.toString())
                 let text_y_1 = create_elements.create_text(693, 384-i*50, g, "black", i.toString())
                 let text_y_2 = create_elements.create_text(693, 384+i*50, g, "black", (-i).toString())
-                text_x_1.setAttribute('class','axis_text')
-                text_x_2.setAttribute('class','axis_text')
-                text_y_1.setAttribute('class','axis_text')
-                text_y_2.setAttribute('class','axis_text')
+                text_x_1.setAttribute('class','static_text')
+                text_x_2.setAttribute('class','static_text')
+                text_y_1.setAttribute('class','static_text')
+                text_y_2.setAttribute('class','static_text')
             }
             axis_on = true
         }

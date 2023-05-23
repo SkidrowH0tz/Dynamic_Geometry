@@ -38,7 +38,7 @@
     overflow: hidden;
 }
 
-.axis_text{
+.static_text{
     -webkit-user-select: none;
     -moz-user-select: none;
     -o-user-select: none;
