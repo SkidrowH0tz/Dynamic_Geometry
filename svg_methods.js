@@ -162,6 +162,7 @@ class Animation{
         cv_input.value = this.current_value
         cv_div.appendChild(cv_input)
         cv_input.id = 'cv_input_' + this.variable_name
+        cv_input.readOnly = true
         property_window.appendChild(play_button)
         property_window.appendChild(pause_button)
         property_window.appendChild(stop_button)
@@ -183,6 +184,14 @@ class Animation{
             this.div_obj.style.backgroundColor = 'red'
             this.show_property()
         }
+    }
+    Delete(){
+
+        for(let i in graph.Animations){
+            if(this === graph.Animations[i]){graph.Animations.splice(i, 1)}
+        }
+        obj_list.removeChild(this.div_obj)
+
     }
 }
 class Variable extends Graph{
@@ -372,9 +381,20 @@ class Variable extends Graph{
             editor.removeChild(window)
         }
     }
+    Delete(){
+
+        for(let i in graph.Variables){
+            if(this === graph.Variables[i]){graph.Variables.splice(i, 1)}
+        }
+        let preview = document.getElementById('preview')
+        preview.removeChild(this.assist_div)
+        obj_list.removeChild(this.div_obj)
+
+    }
 }
 class Point extends Graph{
     type = 'Point'
+    point_type
     P
     Basic_to = []
     Attached_to = []
@@ -806,10 +826,10 @@ class Point extends Graph{
             }else if(this.Attached_to[0].info.type === 'Mid_Point'){
                 let bias_x = x - this.P.cx.baseVal.value
                 let bias_y = y - this.P.cy.baseVal.value
-                let x1 = this.Attached_to[0].object.P1.P.cx.baseVal.value
-                let y1 = this.Attached_to[0].object.P1.P.cy.baseVal.value
-                let x2 = this.Attached_to[0].object.P2.P.cx.baseVal.value
-                let y2 = this.Attached_to[0].object.P2.P.cy.baseVal.value
+                let x1 = this.Attached_to[0].object.L.x1.baseVal.value
+                let y1 = this.Attached_to[0].object.L.y1.baseVal.value
+                let x2 = this.Attached_to[0].object.L.x2.baseVal.value
+                let y2 = this.Attached_to[0].object.L.y2.baseVal.value
 
                 this.Attached_to[0].object.P1.ReCalculate_chosen(x1+bias_x, y1+bias_y)
                 this.Attached_to[0].object.P2.ReCalculate_chosen(x2+bias_x, y2+bias_y)
@@ -830,6 +850,17 @@ class Point extends Graph{
             this.Basic_to[i].ReCalculate_not_chosen()
         }
     }
+    Refresh_point_type(){
+        if(this.point_type === 'free'){this.div_obj.textContent = 'Free Point'}
+        else if(this.point_type === 'on_line'){this.div_obj.textContent = 'Point on Line'}
+        else if(this.point_type === 'on_circle'){this.div_obj.textContent = 'Point on Circle'}
+        else if(this.point_type === 'on_curve'){this.div_obj.textContent = 'Point on Curve'}
+        else if(this.point_type === 'i_ll'){this.div_obj.textContent = 'Intersection of Line and Line'}
+        else if(this.point_type === 'i_lcir'){this.div_obj.textContent = 'Intersection of Line and Circle'}
+        else if(this.point_type === 'i_cc'){this.div_obj.textContent = 'Intersection of Circle and Circle'}
+        else if(this.point_type === 'Mid_Point'){this.div_obj.textContent = 'Middle Point'}
+    }
+
     Delete(){
         while(this.Basic_to.length > 0){
             this.Basic_to[0].Delete()
@@ -930,9 +961,11 @@ class Line extends Graph{
                     type: 'Mid_Point',
                 }
             })
+            PP.point_type = 'Mid_Point'
             p.Attached_Points.push(PP)
             graph.add_point(PP)
             graph.elements.push(P)
+            PP.Refresh_point_type()
         }
         perpendicular_bisector_button.onclick = function (){
             let x1 = p.L.x1.baseVal.value
@@ -949,6 +982,7 @@ class Line extends Graph{
                     type: 'Mid_Point',
                 }
             })
+            PP.point_type = 'Mid_Point'
             p.Attached_Points.push(PP)
             graph.add_point(PP)
             graph.elements.push(P)
@@ -971,14 +1005,19 @@ class Line extends Graph{
             graph.add_line(l)
             l.pb_to = PP
             p.Attached_Lines.push(l)
+            PP.Refresh_point_type()
+            l.Refresh_line_type()
         }
 
         let track_div = document.createElement('div')
         track_div.appendChild(document.createTextNode('Tracks(√ for open, × for close):'))
         let cb = this.tracks_checkbox
         track_div.appendChild(cb)
-        property_window.appendChild(mid_point_button)
-        property_window.appendChild(perpendicular_bisector_button)
+
+        if(this.pb_to === undefined){
+            property_window.appendChild(mid_point_button)
+            property_window.appendChild(perpendicular_bisector_button)
+        }
         property_window.appendChild(track_div)
     }
     chosen_switch(){
@@ -1060,6 +1099,10 @@ class Line extends Graph{
             this.Attached_Points[i].ReCalculate_Attached(x,y)
         }
         for (let i in this.Attached_Lines){
+            let track_status = methods.get_track_status(this.Attached_Lines[i])
+            if(track_status){
+                create_elements.create_line(this.Attached_Lines[i].L.x1.baseVal.value, this.Attached_Lines[i].L.x2.baseVal.value, this.Attached_Lines[i].L.y1.baseVal.value, this.Attached_Lines[i].L.y2.baseVal.value, this.Attached_Lines[i].tracks, 'purple')
+            }
             let x = (x1 + x2) / 2
             let y = (y1 + y2) / 2
             let obj = trans_coord.LTG(x,y)
@@ -1126,6 +1169,10 @@ class Line extends Graph{
         this.A = (obj2.gy-obj1.gy)/(obj2.gx-obj1.gx)
         this.C = (obj2.gx*obj1.gy-obj1.gx*obj2.gy)/(obj2.gx-obj1.gx)
         for (let i in this.Attached_Lines){
+            let track_status = methods.get_track_status(this.Attached_Lines[i])
+            if(track_status){
+                create_elements.create_line(this.Attached_Lines[i].L.x1.baseVal.value, this.Attached_Lines[i].L.x2.baseVal.value, this.Attached_Lines[i].L.y1.baseVal.value, this.Attached_Lines[i].L.y2.baseVal.value, this.Attached_Lines[i].tracks, 'purple')
+            }
             let x = (x1 + x2) / 2
             let y = (y1 + y2) / 2
             let obj = trans_coord.LTG(x,y)
@@ -1169,7 +1216,9 @@ class Line extends Graph{
         obj_list.removeChild(this.div_obj)
 
     }
-
+    Refresh_line_type(){
+        if(this.pb_to !== undefined){this.div_obj.textContent = 'Perpendicular Bisector'}
+    }
 }
 class Circle extends Graph{
 
@@ -1794,6 +1843,7 @@ class Graph_list{
     Circles = []
     Curves = []
     Variables = []
+    Animations = []
     elements = []
     add_point = function (p){
         this.Points.push(p)
@@ -1809,6 +1859,9 @@ class Graph_list{
     }
     add_variable = function (v){
         this.Variables.push(v)
+    }
+    add_animation = function (a){
+        this.Animations.push(a)
     }
 }
 graph = new Graph_list()
@@ -1887,6 +1940,133 @@ class create_elements{
 }
 
 class create_function_images{
+    static new_function(){
+        let window = document.createElement('div')
+        let win = document.createElement('div')
+        let title = document.createElement('div')
+        let inputs_form = document.createElement('div')
+        let title_div = document.createElement('div')
+        let exps_div = document.createElement('div')
+        let exps_title = document.createElement('div')
+        let exps_input = document.createElement('input')
+        let e_title_variable = document.createElement('div')
+        let e_title_minimum = document.createElement('div')
+        let e_title_maximum = document.createElement('div')
+        let e_title_increment = document.createElement('div')
+        let e_title_cv = document.createElement('div')
+        let input_div = document.createElement('div')
+        let common_input_variable = document.createElement('div')
+        let common_input_minimum = document.createElement('div')
+        let common_input_maximum = document.createElement('div')
+        let common_input_increment = document.createElement('div')
+        let common_input_cv = document.createElement('div')
+        let input_variable = document.createElement('input')
+        let input_minimum = document.createElement('input')
+        let input_maximum = document.createElement('input')
+        let input_increment = document.createElement('input')
+        let input_cv = document.createElement('input')
+        let confirm_button_div = document.createElement('div')
+        let cb_div = document.createElement('div')
+
+        window.classList.value = 'window'
+        win.classList.value = 'win'
+        title.classList.value = 'title'
+        inputs_form.classList.value = 'inputs-form'
+        exps_div.classList.value = 'exps-div'
+        exps_title.classList.value = 'title-div'
+        exps_title.style.setProperty('float', 'left')
+        exps_title.style.setProperty('font-size', '14px')
+        exps_input.classList.value = 'exps-input'
+        title_div.classList.value = 'title-div'
+        e_title_variable.classList.value = 'e-title'
+        e_title_minimum.classList.value = 'e-title'
+        e_title_maximum.classList.value = 'e-title'
+        e_title_increment.classList.value = 'e-title'
+        e_title_cv.classList.value = 'e-title'
+        input_div.classList.value = 'input-div'
+        common_input_variable.classList.value = 'common-input'
+        common_input_minimum.classList.value = 'common-input'
+        common_input_maximum.classList.value = 'common-input'
+        common_input_increment.classList.value = 'common-input'
+        common_input_cv.classList.value = 'common-input'
+        input_variable.classList.value = 'input'
+        input_minimum.classList.value = 'input'
+        confirm_button_div.classList.value = 'confirm-button'
+        cb_div.classList.value = 'cb'
+
+        input_minimum.type = 'number'
+        input_maximum.classList.value = 'input'
+        input_maximum.type = 'number'
+        input_increment.classList.value = 'input'
+        input_increment.type = 'number'
+        input_cv.classList.value = 'input'
+        input_cv.type = 'number'
+
+        input_variable.value = 'x'
+        input_variable.readOnly = true
+        input_minimum.value = -5
+        input_maximum.value = 5
+        input_increment.value = 200
+        input_cv.value = 10
+
+        title.appendChild(document.createTextNode('Function Window'))
+        exps_title.appendChild(document.createTextNode('Function: y = '))
+        e_title_variable.appendChild(document.createTextNode('Variable'))
+        e_title_minimum.appendChild(document.createTextNode('Minimum'))
+        e_title_maximum.appendChild(document.createTextNode('Maximum'))
+        e_title_increment.appendChild(document.createTextNode('Samples'))
+        e_title_cv.appendChild(document.createTextNode('Threshold'))
+        cb_div.appendChild(document.createTextNode('Confirm'))
+
+        confirm_button_div.appendChild(cb_div)
+
+        common_input_variable.appendChild(input_variable)
+        common_input_minimum.appendChild(input_minimum)
+        common_input_maximum.appendChild(input_maximum)
+        common_input_increment.appendChild(input_increment)
+        common_input_cv.appendChild(input_cv)
+
+        input_div.appendChild(common_input_variable)
+        input_div.appendChild(common_input_minimum)
+        input_div.appendChild(common_input_maximum)
+        input_div.appendChild(common_input_increment)
+        input_div.appendChild(common_input_cv)
+
+        exps_div.appendChild(exps_title)
+        exps_div.appendChild(exps_input)
+
+        title_div.appendChild(e_title_variable)
+        title_div.appendChild(e_title_minimum)
+        title_div.appendChild(e_title_maximum)
+        title_div.appendChild(e_title_increment)
+        title_div.appendChild(e_title_cv)
+
+        inputs_form.appendChild(exps_div)
+        inputs_form.appendChild(title_div)
+        inputs_form.appendChild(input_div)
+
+        win.appendChild(title)
+
+        window.appendChild(win)
+        window.appendChild(inputs_form)
+        window.appendChild(confirm_button_div)
+
+        let editor = document.getElementById('editor')
+        editor.appendChild(window)
+
+        cb_div.onclick = function (){
+            let expression = exps_input.value
+            let x_info = {
+                low: parseFloat(input_minimum.value),
+                high: parseFloat(input_maximum.value),
+                sample_num: parseFloat(input_increment.value),
+                threshold: parseFloat(input_cv.value)
+            }
+
+            create_function_images.create_function(expression, x_info.low, x_info.high, x_info.sample_num, x_info.threshold)
+            editor.removeChild(window)
+        }
+    }
     static new_variable(){
         let window = document.createElement('div')
         let win = document.createElement('div')
@@ -1940,6 +2120,11 @@ class create_function_images{
         input_increment.type = 'number'
         input_cv.classList.value = 'input'
         input_cv.type = 'number'
+
+        input_minimum.value = 0
+        input_maximum.value = 10
+        input_increment.value = 1
+        input_cv.value = 0
 
         title.appendChild(document.createTextNode('Variable Window'))
         e_title_variable.appendChild(document.createTextNode('Variable'))
@@ -2163,14 +2348,9 @@ class create_function_images{
         }
         return v
     }
-    static create_function(){
+    static create_function(expression, low=-5, high=5, sample_num=200, threshold=10){
         const parser = math.parser()
-        let expression = document.getElementById('function_input').value
-        console.log(expression)
-        let low = -5
-        let high = 5
-        let sample_num = 200
-        let threshold = 10
+
         let x = low
         let y = 0
         let obj = {}
@@ -2283,7 +2463,7 @@ class create_function_images{
     }
     static create_animation(variable_name, range={low:0,high:1}, step=100, interval=50){
         let a = new Animation(variable_name, range, step, interval)
-
+        graph.add_animation(a)
 
     }
 
@@ -2333,7 +2513,14 @@ class methods{
             if(graph.Variables[i].chosen){
                 graph.Variables[i].chosen = false
                 graph.Variables[i].div_obj.setAttribute('box-shadow', 'rgb(255, 0, 255) 0px 0px 5px')
-                graph.Curves[i].div_obj.style.backgroundColor = 'white'
+                graph.Variables[i].div_obj.style.backgroundColor = 'white'
+            }
+        }
+        for(let i in graph.Animations){
+            if(graph.Animations[i].chosen){
+                graph.Animations[i].chosen = false
+                graph.Animations[i].div_obj.setAttribute('box-shadow', 'rgb(255, 0, 255) 0px 0px 5px')
+                graph.Animations[i].div_obj.style.backgroundColor = 'white'
             }
         }
         for (let i = 0; i < graph.elements.length; i++) {
@@ -2552,13 +2739,13 @@ class methods{
                     selected_circles[i].x = selected_circles[i].C.C.cx.baseVal.value
                     selected_circles[i].y = selected_circles[i].C.C.cy.baseVal.value
                 }
-                for(let i in selected_variables){
+                /*for(let i in selected_variables){
                     selected_variables[i].variable.ReCalculate_chosen(selected_variables[i].x+(x2-x1),selected_variables[i].y+(y2-y1))
                     selected_variables[i].x = $('#'+selected_variables[i].variable.assist_div_id).position().left-$('#'+selected_variables[i].variable.assist_div_id).parent().position().left
 
                     selected_variables[i].y = $('#'+selected_variables[i].variable.assist_div_id).position().top-$('#'+selected_variables[i].variable.assist_div_id).parent().position().top
                     console.log(1)
-                }
+                }*/
 
 
                 if(Math.abs(bias_x) > 0 || Math.abs(bias_y) > 0){moved = true}
@@ -2619,8 +2806,10 @@ class methods{
                                 ratio: (x1-res.object.L.x1.baseVal.value)/(res.object.L.x2.baseVal.value-res.object.L.x1.baseVal.value),
                             }
                         })
+                        p.point_type = 'on_line'
                         res.object.Attached_Points.push(p)
                         console.log(p.Attached_to)
+                        p.Refresh_point_type()
                         return
                     case 'Circle':
                         p.Attached_to.push({
@@ -2633,8 +2822,10 @@ class methods{
                                 r2b_bias_y: res.object.Pb.P.cy.baseVal.value - res.object.Pr.P.cy.baseVal.value
                             }
                         })
+                        p.point_type = 'on_circle'
                         res.object.Attached_Points.push(p)
                         console.log(p.Attached_to)
+                        p.Refresh_point_type()
                         return
                     case 'Curve':
                         p.Attached_to.push({
@@ -2643,8 +2834,10 @@ class methods{
                                 type: 'Curve',
                             }
                         })
+                        p.point_type = 'on_curve'
                         res.object.Attached_Points.push(p)
                         console.log(p.Attached_to)
+                        p.Refresh_point_type()
                         return
                     case 'Intersection':
                         p.Attached_to.push({
@@ -2653,24 +2846,28 @@ class methods{
                                 type: 'Intersection',
                             }
                         })
-                        if(res.object[0].type === 'Line' && res.object[1].type === 'Line'){p.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Line'}}
-                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Circle') || (res.object[1].type === 'Line' && res.object[0].type === 'Circle')){p.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Circle'}}
+                        if(res.object[0].type === 'Line' && res.object[1].type === 'Line'){p.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Line'};p.point_type = 'i_ll'}
+                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Circle') || (res.object[1].type === 'Line' && res.object[0].type === 'Circle')){p.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Circle'};p.point_type = 'i_lcir'}
                         else if((res.object[0].type === 'Line' && res.object[1].type === 'Curve') || (res.object[1].type === 'Line' && res.object[0].type === 'Curve')){p.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Curve'}}
-                        else if(res.object[0].type === 'Circle' && res.object[1].type === 'Circle'){p.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Circle'}}
+                        else if(res.object[0].type === 'Circle' && res.object[1].type === 'Circle'){p.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Circle'};p.point_type = 'i_cc'}
                         else if((res.object[0].type === 'Circle' && res.object[1].type === 'Curve') || (res.object[1].type === 'Circle' && res.object[0].type === 'Curve')){p.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Curve'}}
                         else if(res.object[0].type === 'Curve' && res.object[1].type === 'Curve'){p.Attached_to[0].info = {type:'Intersection',itsc_type:'Curve_Curve'}}
                         res.object[0].Attached_Points.push(p)
                         res.object[1].Attached_Points.push(p)
                         console.log(p.Attached_to)
+                        p.Refresh_point_type()
                         return
                 }
             }
             p = create_elements.create_point(x1, y1, svg_points,'red')
             pp = new Point(p)
+            pp.point_type = 'free'
+
             graph.add_point(pp)
             graph.elements.push(p)
 
             console.log(graph)
+            pp.Refresh_point_type()
         }
         svg.onmousemove=function (){}
         svg.onmouseup=function (){}
@@ -2728,8 +2925,10 @@ class methods{
                                 ratio: (x1-res.object.L.x1.baseVal.value)/(res.object.L.x2.baseVal.value-res.object.L.x1.baseVal.value),
                             }
                         })
+                        p1.point_type = 'on_line'
                         res.object.Attached_Points.push(p1)
                         console.log(p1.Attached_to)
+                        p1.Refresh_point_type()
                         return
                     case 'Circle':
 
@@ -2743,8 +2942,10 @@ class methods{
                                 r2b_bias_y: res.object.Pb.P.cy.baseVal.value - res.object.Pr.P.cy.baseVal.value
                             }
                         })
+                        p1.point_type = 'on_circle'
                         res.object.Attached_Points.push(p1)
                         console.log(p1.Attached_to)
+                        p1.Refresh_point_type()
                         return
                     case 'Curve':
                         p1.Attached_to.push({
@@ -2753,19 +2954,40 @@ class methods{
                                 type: 'Curve',
                             }
                         })
+                        p1.point_type = 'on_curve'
                         res.object.Attached_Points.push(p1)
                         console.log(p1.Attached_to)
+                        p1.Refresh_point_type()
+                        return
+                    case 'Intersection':
+                        p1.Attached_to.push({
+                            object:res.object,
+                            info:{
+                                type: 'Intersection',
+                            }
+                        })
+                        if(res.object[0].type === 'Line' && res.object[1].type === 'Line'){p1.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Line'};p1.point_type = 'i_ll'}
+                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Circle') || (res.object[1].type === 'Line' && res.object[0].type === 'Circle')){p1.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Circle'};p1.point_type = 'i_lcir'}
+                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Curve') || (res.object[1].type === 'Line' && res.object[0].type === 'Curve')){p1.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Curve'}}
+                        else if(res.object[0].type === 'Circle' && res.object[1].type === 'Circle'){p1.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Circle'};p1.point_type = 'i_cc'}
+                        else if((res.object[0].type === 'Circle' && res.object[1].type === 'Curve') || (res.object[1].type === 'Circle' && res.object[0].type === 'Curve')){p1.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Curve'}}
+                        else if(res.object[0].type === 'Curve' && res.object[1].type === 'Curve'){p1.Attached_to[0].info = {type:'Intersection',itsc_type:'Curve_Curve'}}
+                        res.object[0].Attached_Points.push(p1)
+                        res.object[1].Attached_Points.push(p1)
+                        console.log(p1.Attached_to)
+                        p1.Refresh_point_type()
                         return
                 }
             }
             pp1 = create_elements.create_point(x1, y1, svg_points,'red')
             p1 = new Point(pp1)
+            p1.point_type = 'free'
             graph.add_point(p1)
             graph.elements.push(pp1)
             line = create_elements.create_line(x1, x2, y1, y2, svg_others, 'blue')
 
             flag = true
-
+            p1.Refresh_point_type()
         }
         svg.onmousemove = function (event) {
             if(flag){
@@ -2824,8 +3046,10 @@ class methods{
                                 ratio: (x2-res.object.L.x1.baseVal.value)/(res.object.L.x2.baseVal.value-res.object.L.x1.baseVal.value),
                             }
                         })
+                        p2.point_type = 'on_line'
                         res.object.Attached_Points.push(p2)
                         console.log(p2.Attached_to)
+                        p2.Refresh_point_type()
                         return
                     case 'Circle':
                         p2.Attached_to.push({
@@ -2838,8 +3062,10 @@ class methods{
                                 r2b_bias_y: res.object.Pb.P.cy.baseVal.value - res.object.Pr.P.cy.baseVal.value
                             }
                         })
+                        p2.point_type = 'on_circle'
                         res.object.Attached_Points.push(p2)
                         console.log(p2.Attached_to)
+                        p2.Refresh_point_type()
                         return
                     case 'Curve':
                         p2.Attached_to.push({
@@ -2848,13 +3074,34 @@ class methods{
                                 type: 'Curve',
                             }
                         })
+                        p2.point_type = 'on_curve'
                         res.object.Attached_Points.push(p2)
                         console.log(p2.Attached_to)
+                        p2.Refresh_point_type()
+                        return
+                    case 'Intersection':
+                        p2.Attached_to.push({
+                            object:res.object,
+                            info:{
+                                type: 'Intersection',
+                            }
+                        })
+                        if(res.object[0].type === 'Line' && res.object[1].type === 'Line'){p2.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Line'};p2.point_type = 'i_ll'}
+                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Circle') || (res.object[1].type === 'Line' && res.object[0].type === 'Circle')){p2.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Circle'};p2.point_type = 'i_lcir'}
+                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Curve') || (res.object[1].type === 'Line' && res.object[0].type === 'Curve')){p2.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Curve'}}
+                        else if(res.object[0].type === 'Circle' && res.object[1].type === 'Circle'){p2.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Circle'};p2.point_type = 'i_cc'}
+                        else if((res.object[0].type === 'Circle' && res.object[1].type === 'Curve') || (res.object[1].type === 'Circle' && res.object[0].type === 'Curve')){p2.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Curve'}}
+                        else if(res.object[0].type === 'Curve' && res.object[1].type === 'Curve'){p2.Attached_to[0].info = {type:'Intersection',itsc_type:'Curve_Curve'}}
+                        res.object[0].Attached_Points.push(p2)
+                        res.object[1].Attached_Points.push(p2)
+                        console.log(p2.Attached_to)
+                        p2.Refresh_point_type()
                         return
                 }
             }
             pp2 = create_elements.create_point(x2, y2, svg_points,'red')
             p2 = new Point(pp2)
+            p2.point_type = 'free'
             graph.add_point(p2)
             l = new Line(line, p1, p2)
             graph.add_line(l)
@@ -2863,6 +3110,7 @@ class methods{
             graph.elements.push(line)
             graph.elements.push(pp2)
             console.log(graph)
+            p2.Refresh_point_type()
         }
     }
 
@@ -2921,8 +3169,10 @@ class methods{
                                 ratio: (x1-res.object.L.x1.baseVal.value)/(res.object.L.x2.baseVal.value-res.object.L.x1.baseVal.value),
                             }
                         })
+                        pr.point_type = 'on_line'
                         res.object.Attached_Points.push(pr)
                         console.log(pr.Attached_to)
+                        pr.Refresh_point_type()
                         return
                     case 'Circle':
                         pr.Attached_to.push({
@@ -2935,8 +3185,10 @@ class methods{
                                 r2b_bias_y: res.object.Pb.P.cy.baseVal.value - res.object.Pr.P.cy.baseVal.value
                             }
                         })
+                        pr.point_type = 'on_circle'
                         res.object.Attached_Points.push(pr)
                         console.log(pr.Attached_to)
+                        pr.Refresh_point_type()
                         return
                     case 'Curve':
                         pr.Attached_to.push({
@@ -2945,18 +3197,39 @@ class methods{
                                 type: 'Curve',
                             }
                         })
+                        pr.point_type = 'on_curve'
                         res.object.Attached_Points.push(pr)
                         console.log(pr.Attached_to)
+                        pr.Refresh_point_type()
+                        return
+                    case 'Intersection':
+                        pr.Attached_to.push({
+                            object:res.object,
+                            info:{
+                                type: 'Intersection',
+                            }
+                        })
+                        if(res.object[0].type === 'Line' && res.object[1].type === 'Line'){pr.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Line'};pr.point_type = 'i_ll'}
+                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Circle') || (res.object[1].type === 'Line' && res.object[0].type === 'Circle')){pr.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Circle'};pr.point_type = 'i_lcir'}
+                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Curve') || (res.object[1].type === 'Line' && res.object[0].type === 'Curve')){pr.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Curve'}}
+                        else if(res.object[0].type === 'Circle' && res.object[1].type === 'Circle'){pr.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Circle'};pr.point_type = 'i_cc'}
+                        else if((res.object[0].type === 'Circle' && res.object[1].type === 'Curve') || (res.object[1].type === 'Circle' && res.object[0].type === 'Curve')){pr.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Curve'}}
+                        else if(res.object[0].type === 'Curve' && res.object[1].type === 'Curve'){pr.Attached_to[0].info = {type:'Intersection',itsc_type:'Curve_Curve'}}
+                        res.object[0].Attached_Points.push(pr)
+                        res.object[1].Attached_Points.push(pr)
+                        console.log(pr.Attached_to)
+                        pr.Refresh_point_type()
                         return
                 }
             }
             ppr = create_elements.create_point(x1, y1, svg_points,'red')
             pr = new Point(ppr)
+            pr.point_type = 'free'
             graph.add_point(pr)
             graph.elements.push(ppr)
             circle = create_elements.create_circle(x1,y1,svg_others,'blue')
             flag = true
-
+            pr.Refresh_point_type()
         }
         svg.onmousemove = function (event) {
             if(flag){
@@ -3015,8 +3288,10 @@ class methods{
                                 ratio: (x2-res.object.L.x1.baseVal.value)/(res.object.L.x2.baseVal.value-res.object.L.x1.baseVal.value),
                             }
                         })
+                        pb.point_type = 'on_line'
                         res.object.Attached_Points.push(pb)
                         console.log(pb.Attached_to)
+                        pb.Refresh_point_type()
                         return
                     case 'Circle':
                         pb.Attached_to.push({
@@ -3029,8 +3304,10 @@ class methods{
                                 r2b_bias_y: res.object.Pb.P.cy.baseVal.value - res.object.Pr.P.cy.baseVal.value
                             }
                         })
+                        pb.point_type = 'on_circle'
                         res.object.Attached_Points.push(pb)
                         console.log(pb.Attached_to)
+                        pb.Refresh_point_type()
                         return
                     case 'Curve':
                         pb.Attached_to.push({
@@ -3039,13 +3316,34 @@ class methods{
                                 type: 'Curve',
                             }
                         })
+                        pb.point_type = 'on_curve'
                         res.object.Attached_Points.push(pb)
                         console.log(pb.Attached_to)
+                        pb.Refresh_point_type()
+                        return
+                    case 'Intersection':
+                        pb.Attached_to.push({
+                            object:res.object,
+                            info:{
+                                type: 'Intersection',
+                            }
+                        })
+                        if(res.object[0].type === 'Line' && res.object[1].type === 'Line'){pb.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Line'};pb.point_type = 'i_ll'}
+                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Circle') || (res.object[1].type === 'Line' && res.object[0].type === 'Circle')){pb.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Circle'};pb.point_type = 'i_lcir'}
+                        else if((res.object[0].type === 'Line' && res.object[1].type === 'Curve') || (res.object[1].type === 'Line' && res.object[0].type === 'Curve')){pb.Attached_to[0].info = {type:'Intersection',itsc_type:'Line_Curve'}}
+                        else if(res.object[0].type === 'Circle' && res.object[1].type === 'Circle'){pb.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Circle'};pb.point_type = 'i_cc'}
+                        else if((res.object[0].type === 'Circle' && res.object[1].type === 'Curve') || (res.object[1].type === 'Circle' && res.object[0].type === 'Curve')){pb.Attached_to[0].info = {type:'Intersection',itsc_type:'Circle_Curve'}}
+                        else if(res.object[0].type === 'Curve' && res.object[1].type === 'Curve'){pb.Attached_to[0].info = {type:'Intersection',itsc_type:'Curve_Curve'}}
+                        res.object[0].Attached_Points.push(pb)
+                        res.object[1].Attached_Points.push(pb)
+                        console.log(pb.Attached_to)
+                        pb.Refresh_point_type()
                         return
                 }
             }
             ppb = create_elements.create_point(x2, y2, svg_points,'red')
             pb = new Point(ppb)
+            pb.point_type = 'free'
             c = new Circle(circle, pr, pb)
             graph.add_circle(c)
             graph.elements.push(circle)
@@ -3054,6 +3352,7 @@ class methods{
             pr.Basic_to.push(c)
             pb.Basic_to.push(c)
             console.log(graph)
+            pb.Refresh_point_type()
         }
     }
 
@@ -3127,7 +3426,26 @@ class methods{
             }
             ++i
         }
-        this.clear_graph()
-        this.select_button_chosen()
+        i = 0
+        while(graph.Variables.length > 0 && i<graph.Variables.length){
+            if(graph.Variables[i].chosen){
+                graph.Variables[i].Delete()
+                i = 0
+                continue
+            }
+            ++i
+        }
+        i = 0
+        while(graph.Animations.length > 0 && i< graph.Animations.length){
+            if(graph.Animations[i].chosen){
+                graph.Animations[i].Delete()
+                i = 0
+                continue
+            }
+            ++i
+        }
+        methods.clear_graph()
+        methods.select_button_chosen()
+        methods.clear_property_window()
     }
 }

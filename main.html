@@ -18,16 +18,15 @@
         <div class="middle" style="position: relative">
             <div class="bind-events">
                 <div style="width: 100%; left: 0; position: absolute">
-                    <button class="button-set" onclick="methods.select_button_chosen()">select</button>
-                    <button class="button-set" onclick="methods.point_button_chosen()">point</button>
-                    <button class="button-set" onclick="methods.line_button_chosen()">line</button>
-                    <button class="button-set" onclick="methods.circle_button_chosen()">circle</button>
-                    <button class="button-set" onclick="methods.create_axis()">axis</button>
-                    <button class="button-set" onclick="create_function_images.create_function()">fun</button>
-                    <input id="function_input" style="width:100px; margin-bottom: 20px">
-                    <button class="button-set" onclick="methods.delete_objects()">delete</button>
-                    <button class="button-set" onclick="create_function_images.new_variable()">var</button>
+                    <button class="button-set" onclick="methods.select_button_chosen()">Select</button>
+                    <button class="button-set" onclick="methods.point_button_chosen()">Point</button>
+                    <button class="button-set" onclick="methods.line_button_chosen()">Line</button>
+                    <button class="button-set" onclick="methods.circle_button_chosen()">Circle</button>
+                    <button class="button-set" onclick="methods.create_axis()">Show_Axis</button>
+                    <button class="button-set" onclick="create_function_images.new_function()">Function</button>
+                    <button class="button-set" onclick="create_function_images.new_variable()">Variable</button>
                     <button class="button-set" onclick="create_function_images.new_animation()">Animation</button>
+                    <button class="button-set" onclick="methods.delete_objects()">Delete</button>
                 </div>
             </div>
 
@@ -44,7 +43,7 @@
                 </svg>
             </div>
 
-            <div draggable="false" style="user-select:none;background:#f5f5f5;position: absolute;height: 384px; width:235px;border: 1px solid #979797;border-bottom: 0;border-top: 0;padding: 0 1px;flex-direction: column;display:flex; right: 0">
+            <div draggable="false" style="user-select:none;background:#f5f5f5;position: absolute;height: 584px; width:235px;border: 1px solid #979797;border-bottom: 0;border-top: 0;padding: 0 1px;flex-direction: column;display:flex; right: 0">
                 <div class="object" style="min-height:100px;border:1px solid #979797;background: #fff;flex:1;">
                     <div class="object-list">
                         <div class="list" id="obj_list">
@@ -52,7 +51,7 @@
                     </div>
                 </div>
             </div>
-            <div draggable="false" style="user-select:none;background:#f5f5f5;position: absolute;height:384px; width:235px;border: 1px solid #979797;border-bottom: 0;border-top: 0;padding: 0 1px;flex-direction: column;display:flex; right: 0; top: 384px">
+            <div draggable="false" style="user-select:none;background:#f5f5f5;position: absolute;height:184px; width:235px;border: 1px solid #979797;border-bottom: 0;border-top: 0;padding: 0 1px;flex-direction: column;display:flex; right: 0; top: 584px">
                 <div class="object" style="min-height:100px;border:1px solid #979797;background: #fff;flex:1;">
                     <div class="object-list">
                         <div class="list" id="property">
@@ -69,7 +68,5 @@
 
 <script type="text/javascript" src="svg_methods.js"></script>
 <script type="text/javascript" src="math.js"></script>
-<script type="text/javascript" src="jquery.js"></script>
-<script type="text/javascript" src="jquery-ui.js"></script>
-<script type="text/javascript" src="jquery-ui.min.js"></script>
+
 </html>
